@@ -210,7 +210,7 @@ namespace Rdr2CinematicCamera
                         currentDestination = World.GetWaypointPosition();
 
                             Game.Player.Character.Task.DriveTo(Game.Player.Character.CurrentVehicle,
-                            (Vector3) currentDestination, 50.0f, _speed, (int) _drivingStyle);
+                            (Vector3) currentDestination, 150.0f, _speed, (int) _drivingStyle);
                     }
                 }
 
