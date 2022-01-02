@@ -25,6 +25,7 @@ namespace Rdr2CinematicCamera
         // Variables
         private bool _firstTime = true;
         private bool _isActive = false;
+        private bool _hasReached = false;
         private const string ModName = "RDR2 Cinematic Camera";
         private const string Developer = "Hermes";
         private const string Version = "1.0";
@@ -165,7 +166,6 @@ namespace Rdr2CinematicCamera
                     _cinematicBars[1].Position =
                         new Point(_cinematicBars[1].Position.X, _cinematicBars[1].Position.Y - animSpeed);
                 }
-
                 _cinematicBars[0].Draw();
                 _cinematicBars[1].Draw();
                 Function.Call(Hash.DISPLAY_RADAR, false);
@@ -186,7 +186,7 @@ namespace Rdr2CinematicCamera
                     _cinematicBars[1].Draw();
                 }
 
-                currentDestination = Vector3.Zero;
+
                 Function.Call(Hash.SET_CINEMATIC_MODE_ACTIVE, false);
                 Function.Call(Hash.DISPLAY_RADAR, true);
             }
@@ -208,7 +208,8 @@ namespace Rdr2CinematicCamera
                     {
                         UI.Notify("Driving started!");
                         currentDestination = World.GetWaypointPosition();
-                        Game.Player.Character.Task.DriveTo(Game.Player.Character.CurrentVehicle,
+
+                            Game.Player.Character.Task.DriveTo(Game.Player.Character.CurrentVehicle,
                             (Vector3) currentDestination, 50.0f, _speed, (int) _drivingStyle);
                     }
                 }
@@ -216,7 +217,7 @@ namespace Rdr2CinematicCamera
                 else
                 {
                     UI.Notify("Driving stopped!");
-                    Game.Player.Character.Task.Wait(0);
+                    Game.Player.Character.Task.Wait(1);
                 }
 
                 _isActive = !_isActive;
