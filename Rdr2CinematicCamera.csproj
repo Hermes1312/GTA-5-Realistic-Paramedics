@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Rdr2CinematicCamera</RootNamespace>
-    <AssemblyName>RDR2 Cinematic Camera</AssemblyName>
+    <AssemblyName>Rdr2CinematicCamera</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />

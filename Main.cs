@@ -144,17 +144,17 @@ namespace Rdr2CinematicCamera
 
         private void OnTick(object sender, EventArgs e)
         {
-            _uiText.Draw();
-
-            //if(_drawCamera && Game.Player.Character.CurrentVehicle != null && Game.IsWaypointActive)
-            //    UI.DrawTexture($"scripts\\Rdr2CinematicCamera\\cam{_step}.png", 1, 1, 100, new Point(650, 650),
-            //        new Size(64, 64));
+            if(_drawCamera && Game.Player.Character.CurrentVehicle != null && Game.IsWaypointActive)
+                UI.DrawTexture($"scripts\\Rdr2CinematicCamera\\cam{_step}.png", 1, 1, 100, new Point(650, 650),
+                    new Size(64, 64));
 
             if (_forceCinCam)
                 Function.Call(Hash.SET_CINEMATIC_MODE_ACTIVE, true);
 
-            if (_isActive && Game.IsControlPressed(2, Control.NextCamera))
+            if (Game.IsControlPressed(2, Control.NextCamera))
+            {
                 _forceCinCam = false;
+            }
 
             if (Game.IsControlPressed(2, Control.VehicleCinCam))
             {
@@ -194,6 +194,7 @@ namespace Rdr2CinematicCamera
 
                 if (_holdStopwatch.ElapsedMilliseconds > 1000)
                 {
+                    _forceCinCam = false;
                     _forceCinCam2 = true;
                     CinematicDriveToWaypoint();
 
@@ -210,7 +211,9 @@ namespace Rdr2CinematicCamera
                 _holdStopwatch.Reset();
 
                 if (_isActive)
+                {
                     _forceCinCam = true;
+                }
             }
 
             if (Game.IsControlPressed(2, Control.VehicleHandbrake) && Game.IsControlPressed(2, Control.VehicleDuck))
