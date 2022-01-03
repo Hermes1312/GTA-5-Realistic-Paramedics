@@ -37,6 +37,7 @@ namespace Rdr2CinematicCamera
         private int _speed = 50;
         private Vector3 _currentDestination;
         private readonly Stopwatch _holdStopwatch = new Stopwatch();
+        private bool alreadyClear = false, forceCinCam = false, forceCinCam2 = false;
 
         public Main()
         {
@@ -139,13 +140,8 @@ namespace Rdr2CinematicCamera
         }
 
 
-        UIText uiText = new UIText("", Point.Empty, 1.0f);
-        bool alreadyClear = false, forceCinCam = false, forceCinCam2 = false;
-
         private void OnTick(object sender, EventArgs e)
         {
-            uiText.Draw();
-
             if(forceCinCam)
                 Function.Call(Hash.SET_CINEMATIC_MODE_ACTIVE, true);
 
@@ -168,9 +164,6 @@ namespace Rdr2CinematicCamera
                     _holdStopwatch.Stop();
                     _holdStopwatch.Reset();
                 }
-
-                else
-                    uiText.Caption = _holdStopwatch.ElapsedMilliseconds.ToString();
             }
 
             if (Game.IsControlJustReleased(2, Control.VehicleCinCam))
