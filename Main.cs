@@ -30,17 +30,13 @@ namespace Rdr2CinematicCamera
         private const string Developer = "Hermes";
         private const string Version = "1.0";
 
-        private readonly UIRectangle[] _cinematicBars = new UIRectangle[2];
+        private readonly UIRectangle[] _cinematicBars = new UIRectangle[2]; 
         private readonly List<DrivingStyle> _drivingStyles;
         private DrivingStyle _drivingStyle = DrivingStyle.Normal;
 
         private int _speed = 50;
-        private int _step = 0;
         private Vector3 _currentDestination;
         private readonly Stopwatch _holdStopwatch = new Stopwatch();
-
-        readonly UIText _uiText = new UIText("", Point.Empty, 1.0f);
-        private bool _alreadyClear = false, _forceCinCam = false, _forceCinCam2 = false, _drawCamera = false;
 
         public Main()
         {
@@ -65,9 +61,9 @@ namespace Rdr2CinematicCamera
 
         private void ReadConfig()
         {
-            if (File.Exists("scripts\\Rdr2CinematicCamera\\Rdr2CinematicCamera.cfg"))
+            if (File.Exists("scripts\\Rdr2CinematicCamera.cfg"))
             {
-                var cfgLines = File.ReadAllLines("scripts\\Rdr2CinematicCamera\\Rdr2CinematicCamera.cfg");
+                var cfgLines = File.ReadAllLines("scripts\\Rdr2CinematicCamera.cfg");
                 _drivingStyle = _drivingStyles[Convert.ToInt16(cfgLines[0])];
                 _speed = Convert.ToInt16(cfgLines[1]);
             }
@@ -142,75 +138,48 @@ namespace Rdr2CinematicCamera
             };
         }
 
+
+        UIText uiText = new UIText("", Point.Empty, 1.0f);
+        bool alreadyClear = false, forceCinCam = false, forceCinCam2 = false;
+
         private void OnTick(object sender, EventArgs e)
         {
-            _uiText.Draw();
+            uiText.Draw();
 
-            //if(_drawCamera && Game.Player.Character.CurrentVehicle != null && Game.IsWaypointActive)
-            //    UI.DrawTexture($"scripts\\Rdr2CinematicCamera\\cam{_step}.png", 1, 1, 100, new Point(650, 650),
-            //        new Size(64, 64));
-
-            if (_forceCinCam)
+            if(forceCinCam)
                 Function.Call(Hash.SET_CINEMATIC_MODE_ACTIVE, true);
 
             if (_isActive && Game.IsControlPressed(2, Control.NextCamera))
-                _forceCinCam = false;
+                forceCinCam = false;
 
             if (Game.IsControlPressed(2, Control.VehicleCinCam))
             {
                 if (!_isActive)
-                    _forceCinCam2 = false;
-
-                _drawCamera = true;
-
-                var elapsed = _holdStopwatch.ElapsedMilliseconds;
-
-                if (elapsed >= 0 && elapsed <= 100)
-                    _step = 0;
-                if (elapsed > 100 && elapsed <= 200)
-                    _step = 1;
-                if (elapsed > 200 && elapsed <= 300)
-                    _step = 2;
-                if (elapsed > 300 && elapsed <= 400)
-                    _step = 3;
-                if (elapsed > 400 && elapsed <= 500)
-                    _step = 4;
-                if (elapsed > 500 && elapsed <= 600)
-                    _step = 5;
-                if (elapsed > 600 && elapsed <= 700)
-                    _step = 6;
-                if (elapsed > 700 && elapsed <= 800)
-                    _step = 7;
-                if (elapsed > 800 && elapsed <= 900)
-                    _step = 8;
-                if (elapsed > 900 && elapsed <= 1000)
-                    _step = 9;
-                if (elapsed > 1000)
-                    _step = 10;
-                
+                    forceCinCam2 = false;
 
                 if (!_holdStopwatch.IsRunning)
                     _holdStopwatch.Start();
 
                 if (_holdStopwatch.ElapsedMilliseconds > 1000)
                 {
-                    _forceCinCam2 = true;
+                    forceCinCam2 = true;
                     CinematicDriveToWaypoint();
 
                     _holdStopwatch.Stop();
                     _holdStopwatch.Reset();
                 }
+
+                else
+                    uiText.Caption = _holdStopwatch.ElapsedMilliseconds.ToString();
             }
 
             if (Game.IsControlJustReleased(2, Control.VehicleCinCam))
             {
-                _drawCamera = false;
-
                 _holdStopwatch.Stop();
                 _holdStopwatch.Reset();
 
                 if (_isActive)
-                    _forceCinCam = true;
+                    forceCinCam = true;
             }
 
             if (Game.IsControlPressed(2, Control.VehicleHandbrake) && Game.IsControlPressed(2, Control.VehicleDuck))
@@ -227,10 +196,10 @@ namespace Rdr2CinematicCamera
 
             if (_isActive)
             {
-                _alreadyClear = false;
+                alreadyClear = false;
                 _isActive = Game.IsWaypointActive;
-
-                if (_isActive)
+                
+                if(_isActive)
                     _currentDestination = World.GetWaypointPosition();
 
                 if (_cinematicBars[0].Position.Y < 0)
@@ -243,7 +212,6 @@ namespace Rdr2CinematicCamera
                     _cinematicBars[1].Position =
                         new Point(_cinematicBars[1].Position.X, _cinematicBars[1].Position.Y - animSpeed);
                 }
-
                 _cinematicBars[0].Draw();
                 _cinematicBars[1].Draw();
 
@@ -265,13 +233,13 @@ namespace Rdr2CinematicCamera
                     _cinematicBars[1].Draw();
                 }
 
-                if (!_alreadyClear)
+                if (!alreadyClear)
                 {
                     Game.Player.Character.Task.ClearAll();
-                    _alreadyClear = true;
+                    alreadyClear = true;
                 }
 
-                if (_forceCinCam2)
+                if(forceCinCam2)
                     Function.Call(Hash.SET_CINEMATIC_MODE_ACTIVE, false);
 
                 Function.Call(Hash.DISPLAY_RADAR, true);
@@ -294,7 +262,7 @@ namespace Rdr2CinematicCamera
                         UI.Notify("Driving started!");
                         _currentDestination = World.GetWaypointPosition();
 
-                        Game.Player.Character.Task.DriveTo(Game.Player.Character.CurrentVehicle,
+                            Game.Player.Character.Task.DriveTo(Game.Player.Character.CurrentVehicle,
                             (Vector3) _currentDestination, 25.0f, _speed, (int) _drivingStyle);
                     }
                 }
