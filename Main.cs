@@ -25,15 +25,18 @@ namespace Rdr2CinematicCamera
         // Variables
         private bool _firstTime = true;
         private bool _isActive = false;
-        private bool _hasReached = false;
+
         private const string ModName = "RDR2 Cinematic Camera";
         private const string Developer = "Hermes";
         private const string Version = "1.0";
-        private readonly UIRectangle[] _cinematicBars;
+
+        private readonly UIRectangle[] _cinematicBars = new UIRectangle[2]; 
+        private readonly List<DrivingStyle> _drivingStyles;
         private DrivingStyle _drivingStyle = DrivingStyle.Normal;
+
         private int _speed = 50;
-        private List<DrivingStyle> _drivingStyles = new List<DrivingStyle>();
-        private Vector3 currentDestination;
+        private Vector3 _currentDestination;
+        private readonly Stopwatch _holdStopwatch = new Stopwatch();
 
         public Main()
         {
@@ -46,8 +49,6 @@ namespace Rdr2CinematicCamera
                 DrivingStyle.Rushed,
                 DrivingStyle.SometimesOvertakeTraffic
             };
-
-            _cinematicBars = new UIRectangle[2];
 
             SetupCinematicBars();
             ReadConfig();
@@ -114,6 +115,8 @@ namespace Rdr2CinematicCamera
                 Maximum = 250
             };
 
+            menuSpeed.Value = _speed;
+
             _uiMenu.AddItem(menuSpeed);
 
             var saveButton = new UIMenuItem("Save changes");
@@ -128,17 +131,56 @@ namespace Rdr2CinematicCamera
                     _drivingStyle = _drivingStyles[menuDrivingStyles.Index];
                     _speed = menuSpeed.Value;
 
-                    if (currentDestination != Vector3.Zero)
-                        Game.Player.Character.Task.DriveTo(Game.Player.Character.CurrentVehicle, currentDestination,
+                    if (_currentDestination != Vector3.Zero)
+                        Game.Player.Character.Task.DriveTo(Game.Player.Character.CurrentVehicle, _currentDestination,
                             50.0f, _speed, (int) _drivingStyle);
                 }
             };
         }
 
+
+        UIText uiText = new UIText("", Point.Empty, 1.0f);
+        bool alreadyClear = false, forceCinCam = false, forceCinCam2 = false;
+
         private void OnTick(object sender, EventArgs e)
         {
-            if (Game.IsControlJustPressed(2, Control.VehicleCinCam))
-                CinematicDriveToWaypoint();
+            uiText.Draw();
+
+            if(forceCinCam)
+                Function.Call(Hash.SET_CINEMATIC_MODE_ACTIVE, true);
+
+            if (_isActive && Game.IsControlPressed(2, Control.NextCamera))
+                forceCinCam = false;
+
+            if (Game.IsControlPressed(2, Control.VehicleCinCam))
+            {
+                if (!_isActive)
+                    forceCinCam2 = false;
+
+                if (!_holdStopwatch.IsRunning)
+                    _holdStopwatch.Start();
+
+                if (_holdStopwatch.ElapsedMilliseconds > 1000)
+                {
+                    forceCinCam2 = true;
+                    CinematicDriveToWaypoint();
+
+                    _holdStopwatch.Stop();
+                    _holdStopwatch.Reset();
+                }
+
+                else
+                    uiText.Caption = _holdStopwatch.ElapsedMilliseconds.ToString();
+            }
+
+            if (Game.IsControlJustReleased(2, Control.VehicleCinCam))
+            {
+                _holdStopwatch.Stop();
+                _holdStopwatch.Reset();
+
+                if (_isActive)
+                    forceCinCam = true;
+            }
 
             if (Game.IsControlPressed(2, Control.VehicleHandbrake) && Game.IsControlPressed(2, Control.VehicleDuck))
             {
@@ -154,7 +196,11 @@ namespace Rdr2CinematicCamera
 
             if (_isActive)
             {
+                alreadyClear = false;
                 _isActive = Game.IsWaypointActive;
+                
+                if(_isActive)
+                    _currentDestination = World.GetWaypointPosition();
 
                 if (_cinematicBars[0].Position.Y < 0)
                 {
@@ -168,6 +214,7 @@ namespace Rdr2CinematicCamera
                 }
                 _cinematicBars[0].Draw();
                 _cinematicBars[1].Draw();
+
                 Function.Call(Hash.DISPLAY_RADAR, false);
             }
 
@@ -175,7 +222,7 @@ namespace Rdr2CinematicCamera
             {
                 if (_cinematicBars[0].Position.Y > -100)
                 {
-                    var animSpeed = 2;
+                    const int animSpeed = 2;
 
                     _cinematicBars[0].Position =
                         new Point(_cinematicBars[0].Position.X, _cinematicBars[0].Position.Y - animSpeed);
@@ -186,13 +233,19 @@ namespace Rdr2CinematicCamera
                     _cinematicBars[1].Draw();
                 }
 
+                if (!alreadyClear)
+                {
+                    Game.Player.Character.Task.ClearAll();
+                    alreadyClear = true;
+                }
 
-                Function.Call(Hash.SET_CINEMATIC_MODE_ACTIVE, false);
+                if(forceCinCam2)
+                    Function.Call(Hash.SET_CINEMATIC_MODE_ACTIVE, false);
+
                 Function.Call(Hash.DISPLAY_RADAR, true);
             }
 
-            if (_menuPool != null)
-                _menuPool.ProcessMenus();
+            _menuPool?.ProcessMenus();
         }
 
         private void ToggleMenu()
@@ -207,10 +260,10 @@ namespace Rdr2CinematicCamera
                     if (Game.IsWaypointActive)
                     {
                         UI.Notify("Driving started!");
-                        currentDestination = World.GetWaypointPosition();
+                        _currentDestination = World.GetWaypointPosition();
 
                             Game.Player.Character.Task.DriveTo(Game.Player.Character.CurrentVehicle,
-                            (Vector3) currentDestination, 150.0f, _speed, (int) _drivingStyle);
+                            (Vector3) _currentDestination, 25.0f, _speed, (int) _drivingStyle);
                     }
                 }
 
