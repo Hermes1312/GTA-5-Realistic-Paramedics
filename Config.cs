@@ -5,17 +5,22 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using GTA;
+using IniParser;
+using IniParser.Model;
 
 namespace Rdr2CinematicCamera
 {
     public class Config
     {
-        private const string ConfigPath = "scripts\\Rdr2CinematicCamera\\Rdr2CinematicCamera.cfg";
+        private const string ConfigPath = "scripts\\Rdr2CinematicCamera\\Rdr2CinematicCamera.ini";
+        private readonly FileIniDataParser _iniParser = new FileIniDataParser();
 
         public readonly List<DrivingStyle> DrivingStyles;
         public DrivingStyle DrivingStyle { get; set; } = DrivingStyle.Normal;
         public int Speed { get; set; } = 50;
-
+        public bool CinematicBars { get; set; } = true;
+        public bool Enabled { get; set; } = true;
+        
         public Config()
         {
             DrivingStyles = new List<DrivingStyle>()
@@ -30,9 +35,12 @@ namespace Rdr2CinematicCamera
 
             if (File.Exists(ConfigPath))
             {
-                var cfgLines = File.ReadAllLines("scripts\\Rdr2CinematicCamera\\Rdr2CinematicCamera.cfg");
-                DrivingStyle = DrivingStyles[Convert.ToInt16(cfgLines[0])];
-                Speed = Convert.ToInt16(cfgLines[1]);
+                var data = _iniParser.ReadFile(ConfigPath);
+
+                Speed = Convert.ToInt16(data["Global"]["Speed"]);
+                DrivingStyle = DrivingStyles[Convert.ToInt16(data["Global"]["DrivingStyle"])];
+                CinematicBars = bool.Parse(data["Global"]["CinematicBars"]);
+                Enabled = bool.Parse(data["Global"]["Enabled"]);
             }
 
             else
@@ -40,12 +48,38 @@ namespace Rdr2CinematicCamera
                 if (!Directory.Exists("scripts\\Rdr2CinematicCamera"))
                     Directory.CreateDirectory("scripts\\Rdr2CinematicCamera");
 
-                File.WriteAllLines(ConfigPath, new []
+                var firstData = new IniData
                 {
-                    "3",
-                    "50"
-                });
+                    ["Global"] =
+                    {
+                        ["Speed"] = "50",
+                        ["DrivingStyle"] = "3",
+                        ["CinematicBars"] = "true",
+                        ["Enabled"] = "true"
+                    }
+                };
+
+                _iniParser.WriteFile(ConfigPath, firstData, Encoding.UTF8);
             }
+        }
+        private int GetIndexFromEnum(DrivingStyle drivingStyle)
+        {
+            for (var i = 0; i < DrivingStyles.Count; i++)
+                if (DrivingStyles[i] == drivingStyle)
+                    return i;
+            return 3;
+        }
+
+        public void Save()
+        {
+            var data = _iniParser.ReadFile(ConfigPath);
+
+            data["Global"]["Speed"] = Speed.ToString();
+            data["Global"]["DrivingStyle"] = (GetIndexFromEnum(DrivingStyle)).ToString();
+            data["Global"]["CinematicBars"] = CinematicBars.ToString();
+            data["Global"]["Enabled"] = Enabled.ToString();
+
+            _iniParser.WriteFile(ConfigPath, data, Encoding.UTF8);
         }
     }
 }

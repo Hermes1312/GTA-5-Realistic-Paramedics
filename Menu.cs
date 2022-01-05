@@ -34,6 +34,11 @@ namespace Rdr2CinematicCamera
                 "Rushed",
                 "Sometimes Overtake Traffic"
             };
+            var enabledBarsCheckBox = new UIMenuCheckboxItem("Enabled: ", config.CinematicBars);
+            _uiMenu.AddItem(enabledBarsCheckBox);
+            
+            var cinematicBarsCheckBox = new UIMenuCheckboxItem("Cinematic bars: ", config.CinematicBars);
+            _uiMenu.AddItem(cinematicBarsCheckBox);
 
             var menuDrivingStyles = new UIMenuListItem("Driving style: ", listOfDrivingStyles, 0);
             _uiMenu.AddItem(menuDrivingStyles);
@@ -46,7 +51,7 @@ namespace Rdr2CinematicCamera
             };
 
             _uiMenu.AddItem(menuSpeed);
-
+            
             var saveButton = new UIMenuItem("Save changes");
             _uiMenu.AddItem(saveButton);
 
@@ -54,11 +59,12 @@ namespace Rdr2CinematicCamera
             {
                 if (item != saveButton) return;
 
-                File.WriteAllText("scripts\\Rdr2CinematicCamera\\Rdr2CinematicCamera.cfg",
-                    $"{menuDrivingStyles.Index}{Environment.NewLine}{menuSpeed.Value}");
-
                 config.DrivingStyle = config.DrivingStyles[menuDrivingStyles.Index];
                 config.Speed = menuSpeed.Value;
+                config.CinematicBars = cinematicBarsCheckBox.Checked;
+                config.Save();
+
+                Game.Player.Character.Task.DriveTo(Game.Player.Character.CurrentVehicle, World.GetWaypointPosition(), 25.0f, config.Speed, (int)config.DrivingStyle);
             };
         }
 
