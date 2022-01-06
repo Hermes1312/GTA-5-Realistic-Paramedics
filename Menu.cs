@@ -64,7 +64,7 @@ namespace Rdr2CinematicCamera
                 config.CinematicBars = cinematicBarsCheckBox.Checked;
                 config.Save();
 
-                Game.Player.Character.Task.DriveTo(Game.Player.Character.CurrentVehicle, World.GetWaypointPosition(), 25.0f, config.Speed, (int)config.DrivingStyle);
+                Game.Player.Character.Task.DriveTo(Game.Player.Character.CurrentVehicle, World.WaypointPosition, 25.0f, config.Speed, config.DrivingStyle);
             };
         }
 

@@ -20,7 +20,7 @@ namespace Rdr2CinematicCamera
         public int Speed { get; set; } = 50;
         public bool CinematicBars { get; set; } = true;
         public bool Enabled { get; set; } = true;
-        
+
         public Config()
         {
             DrivingStyles = new List<DrivingStyle>()
@@ -33,7 +33,7 @@ namespace Rdr2CinematicCamera
                 DrivingStyle.SometimesOvertakeTraffic
             };
 
-            if (File.Exists(ConfigPath))
+            try
             {
                 var data = _iniParser.ReadFile(ConfigPath);
 
@@ -43,11 +43,11 @@ namespace Rdr2CinematicCamera
                 Enabled = bool.Parse(data["Global"]["Enabled"]);
             }
 
-            else
+            catch (Exception)
             {
                 if (!Directory.Exists("scripts\\Rdr2CinematicCamera"))
-                    Directory.CreateDirectory("scripts\\Rdr2CinematicCamera");
-
+                    Directory.CreateDirectory("scripts\\Rdr2CinematicCamera"); 
+                
                 var firstData = new IniData
                 {
                     ["Global"] =
@@ -61,7 +61,7 @@ namespace Rdr2CinematicCamera
 
                 _iniParser.WriteFile(ConfigPath, firstData, Encoding.UTF8);
             }
-        }
+        }   
         private int GetIndexFromEnum(DrivingStyle drivingStyle)
         {
             for (var i = 0; i < DrivingStyles.Count; i++)
