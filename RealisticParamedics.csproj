@@ -7,8 +7,8 @@
     <ProjectGuid>{B9ADE913-2F47-4ED4-BDC4-D3280562BE0D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Rdr2CinematicCamera</RootNamespace>
-    <AssemblyName>Rdr2CinematicCamera</AssemblyName>
+    <RootNamespace>RealisticParamedics</RootNamespace>
+    <AssemblyName>RealisticParamedics</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
@@ -69,15 +69,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CinematicBars.cs" />
-    <Compile Include="Config.cs" />
-    <Compile Include="Menu.cs" />
+    <Compile Include="ExtensionMethods.cs" />
+    <Compile Include="Functions.cs" />
+    <Compile Include="Models.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Shared.cs" />
     <Compile Include="Main.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="TODO.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

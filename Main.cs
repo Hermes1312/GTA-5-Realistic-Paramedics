@@ -1,174 +1,175 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Drawing;
-using System.Threading;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using GTA;
 using GTA.Math;
 using GTA.Native;
 using GTA.UI;
-using Control = GTA.Control;
+using RealisticParamedics.Models;
 
-namespace Rdr2CinematicCamera
+namespace RealisticParamedics
 {
     public class Main : Script
     {
-        // Variables
-        private bool _firstTime = true;
-
-        private const string ModName = "RDR2 Cinematic Camera";
-        private const string Developer = "Hermes";
-        private const string Version = "1.1";
-
-        private readonly Menu _menu;
-        private readonly CinematicBars _cinematicBars;
-        private readonly Stopwatch _holdStopwatch = new Stopwatch();
-        private int _pressedCounter;
-        private bool _forceCinCam = false, _forceCinCam2 = false, _sameHold = false;
-        private bool _alreadyClear;
-        private Vector3 _currentDestination;
-
+        private readonly List<ParamedicsTeam> _paramedicsTeams = new List<ParamedicsTeam>();
+        private readonly List<Ped> _pendingPeds = new List<Ped>(), _deadPeds = new List<Ped>();
         public Main()
         {
-            _cinematicBars = new CinematicBars();
-            Shared.Config = new Config();
-            _menu = new Menu(Shared.Config);
-
             Tick += OnTick;
             KeyDown += OnKeyDown;
-            Interval = 0;
-        }
-
-
-        private void OnTick(object sender, EventArgs e)
-        {
-            new TextElement(_pressedCounter.ToString(), Point.Empty, 1.0f).Draw();
-
-            if (!Shared.Config.Enabled) return;
-
-            if (_forceCinCam)
-                Function.Call(Hash.SET_CINEMATIC_MODE_ACTIVE, true);
-
-            if (Shared.IsActive && Game.IsControlPressed(Control.NextCamera))
-                _forceCinCam = false;
-
-            if (Game.IsControlJustPressed(Control.VehicleCinCam))
-                _pressedCounter++;
-
-            if (Game.IsControlPressed(Control.VehicleCinCam))
-            {
-                if (!Shared.IsActive)
-                    _forceCinCam2 = false;
-
-                if (!_holdStopwatch.IsRunning)
-                    _holdStopwatch.Start();
-
-                if (_holdStopwatch.ElapsedMilliseconds > 1000 && _pressedCounter == 1)
-                {
-                    _forceCinCam2 = true;
-                    CinematicDriveToWaypoint();
-                    _holdStopwatch.Stop();
-                    _holdStopwatch.Reset();
-                    _pressedCounter = 0;
-                }
-
-                if (_holdStopwatch.ElapsedMilliseconds < 1000 && _sameHold && _pressedCounter == 1)
-                    if (Shared.IsActive) _cinematicBars.DecreaseY(2);
-                    else _cinematicBars.IncreaseY(2);
-
-                _sameHold = true;
-            }
-
-            if (Game.IsControlJustReleased(Control.VehicleCinCam))
-            {
-                if (_holdStopwatch.ElapsedMilliseconds < 1000)
-                    if (Shared.IsActive)
-                        _cinematicBars.Setup(1);
-                    else
-                        _cinematicBars.DecreaseY(2);
-
-                _holdStopwatch.Stop();
-                _holdStopwatch.Reset();
-
-                _forceCinCam = Shared.IsActive;
-                _sameHold = false;
-                _pressedCounter = 0;
-            }
-
-
-            if (Game.IsControlJustReleased(Control.VehicleHandbrake) &&
-                Game.IsControlJustReleased(Control.VehicleDuck))
-                _menu.Toggle();
-
-
-            if (_firstTime)
-            {
-                Notification.Show(ModName + " " + Version + " by " + Developer + " Loaded");
-                _firstTime = false;
-            }
-
-            if (Shared.IsActive)
-            {
-                Function.Call(Hash.DISPLAY_RADAR, false); 
-                _alreadyClear = false;
-                Shared.IsActive = Game.IsWaypointActive;
-            }
-
-            else
-            {
-                if (!_alreadyClear)
-                {
-                    Game.Player.Character.Task.ClearAll();
-                    _alreadyClear = true;
-                }
-
-                if (!_sameHold)
-                    _cinematicBars.DecreaseY(2);
-                    
-                if (_forceCinCam2)
-                    Function.Call(Hash.SET_CINEMATIC_MODE_ACTIVE, false);
-
-                Function.Call(Hash.DISPLAY_RADAR, true);
-            }
-
-            _menu.ProcessMenus();
-
-            if (Shared.Config.CinematicBars && Game.Player.Character.CurrentVehicle != null && Game.IsWaypointActive)
-                _cinematicBars.Draw();
-        }
-        public void CinematicDriveToWaypoint()
-        {
-            if (Game.Player.Character.CurrentVehicle == null) return;
-
-            if (!Shared.IsActive && Game.IsWaypointActive)
-            {
-                //Notification.Show("Driving started!");
-                _currentDestination = World.WaypointPosition;
-
-                Game.Player.Character.Task.DriveTo
-                (
-                    Game.Player.Character.CurrentVehicle,
-                    _currentDestination,
-                    25.0f,
-                    Shared.Config.Speed,
-                    Shared.Config.DrivingStyle
-                );
-            }
-
-            else
-            {
-                //Notification.Show("Driving stopped!");
-                Game.Player.Character.Task.ClearAll();
-            }
-
-            Shared.IsActive = !Shared.IsActive;
+            Interval = 1;
         }
 
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.F10)
-                _menu.Toggle();
+            if (e.KeyCode == Keys.NumPad7)
+            {
+                var ambulance = World.CreateVehicle(new Model(VehicleHash.Ambulance),
+                    Game.Player.Character.Position.Around(50f));
+
+                var med1 = World.CreatePed(new Model(PedHash.Paramedic01SMM), ambulance.Position.Around(5f));
+                var med2 = World.CreatePed(new Model(PedHash.Paramedic01SMM), ambulance.Position.Around(5f));
+                med1.SetIntoVehicle(ambulance, VehicleSeat.Driver);
+                med2.SetIntoVehicle(ambulance, VehicleSeat.RightFront);
+
+
+                ambulance.PlaceOnNextStreet();
+            }
+
+            if (e.KeyCode == Keys.NumPad9)
+            {
+                foreach (var ambulance in World.GetNearbyVehicles(Game.Player.Character.Position, 300f, new Model(VehicleHash.Ambulance)))
+                    ambulance.Delete();
+
+                foreach (var paramedic in World.GetNearbyPeds(Game.Player.Character.Position, 300f, new Model(PedHash.Paramedic01SMM)))
+                    paramedic.Delete();
+            }
+        }
+
+        private int tempInt = -1;
+        private void OnTick(object sender, EventArgs e)
+        {
+            #region MyRegion
+            new TextElement($"{tempInt}", PointF.Empty, 0.5f, Color.Azure).Draw();
+            #endregion
+            
+            foreach (var medicPed in World.GetNearbyPeds(Game.Player.Character, 200f))
+            {
+
+                if (medicPed.IsAlive && medicPed.Model == new Model(PedHash.Paramedic01SMM))
+                {
+                    foreach (var ped in World.GetNearbyPeds(medicPed, 60f))
+                    {
+                        if (!ped.IsDead) continue;
+                        if (_deadPeds != null && !_deadPeds.Contains(ped) && !ped.IsInVehicle()) _deadPeds.Add(ped);
+                    }
+
+                    if (medicPed.IsInVehicle() && medicPed.CurrentVehicle.Model == new Model(VehicleHash.Ambulance))
+                    {
+                        //if(_paramedicsTeams.Count <= 0) continue;
+                        var thisTeam = _paramedicsTeams.Select(x => x).FirstOrDefault(x => x.Ambulance == medicPed.CurrentVehicle);
+                        if (thisTeam == null)
+                        {
+
+                            var team = new ParamedicsTeam
+                            {
+                                Ambulance = medicPed.CurrentVehicle,
+                                Paramedics = new List<Paramedic>
+                                {
+                                    new Paramedic
+                                    {
+                                        Ped = medicPed.CurrentVehicle.GetPedOnSeat(VehicleSeat.Driver),
+                                        IsDriver = true
+                                    },
+                                    new Paramedic
+                                    {
+                                        Ped = medicPed.CurrentVehicle.GetPedOnSeat(VehicleSeat.RightFront),
+                                        IsDriver = false
+                                    }
+                                }
+                            };
+
+                            foreach (var paramedic in team.Paramedics)
+                                paramedic.Team = team;
+
+                            _paramedicsTeams.Add(team);
+                        }
+
+                        else
+                        {
+                            //Notification.Show($"{thisTeam.RevivedPedsList?.Count}");
+                            if (thisTeam.RevivedPedsList.Count == 0 && _deadPeds.Count > 0)
+                            {
+                                if (!thisTeam.Paramedics[0].IsDrivingToPed)
+                                {
+                                    thisTeam.Ambulance.IsSirenActive = true;
+
+                                    var nearest = _deadPeds.GetNearestPed(thisTeam.Paramedics[0].Ped);
+                                    //if(nearest == null) continue;
+
+                                    thisTeam.CurrentDest = nearest.Position;
+                                    thisTeam.Paramedics[0].Ped.Task.DriveTo(thisTeam.Ambulance, thisTeam.CurrentDest, 7.5f, 40f, DrivingStyle.IgnoreLights);
+                                    thisTeam.Paramedics[0].IsDrivingToPed = true;
+                                }
+                                else
+                                {
+                                    if (thisTeam.Paramedics[0].Ped.Position.DistanceTo(thisTeam.CurrentDest) < 35f)
+                                        thisTeam.Ambulance.IsSirenSilent = true;
+
+                                    if (!(thisTeam.Paramedics[0].Ped.Position.DistanceTo(thisTeam.CurrentDest) < 10f))
+                                        continue;
+
+                                    foreach (var paramedic in thisTeam.Paramedics)
+                                        paramedic.Ped.Task.LeaveVehicle();
+                                    
+                                }
+                            }
+                            else
+                                thisTeam.DriveAwayWithRevivedPeds();
+                        }
+                    }
+
+                    else
+                    {
+                        if(_deadPeds.Count <= 0) continue;;
+                        // Get nearby peds that are dea
+                        var medicTeam = medicPed.GetTeam(_paramedicsTeams);
+                        tempInt = medicTeam == null ? 1 : 0;
+                        if (medicTeam == null) continue;
+
+                        foreach (var medic in medicTeam.Paramedics)
+                        {
+                            // If medic is not running and team has less than 2 revived peds
+                            if (!medic.IsRunningToRevive && medicTeam.RevivedPeds < 2)
+                            {
+                                var nearest = _deadPeds.GetNearestPed(medic.Ped);
+                                //if (nearest == null) continue;
+                                _pendingPeds.Add(nearest);
+                                _deadPeds.Remove(nearest);
+                                medic.PendingPed = nearest;
+                                medicTeam.RevivedPeds++;
+                                medic.IsRunningToRevive = true;
+                                medic.Ped.AlwaysKeepTask = true;
+                                medic.Ped.Task.RunTo(nearest.Position);
+                            }
+
+                            else if(medic.IsRunningToRevive)
+                            {
+                                if (medic.PendingPed != null && medic.Ped.Position.DistanceTo(medic.PendingPed.Position) < 2f)
+                                    _pendingPeds.Remove(medic.PendingPed);
+                                    
+                                medic.RevivePed();
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
