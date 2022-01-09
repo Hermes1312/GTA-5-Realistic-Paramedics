@@ -147,87 +147,23 @@ namespace RealisticParamedics.Models
                     AnimStopwatch2.Stop();
                 }
             }
-            ///////////////////////
-            if (PendingPed != null && Ped.Position.DistanceTo(PendingPed.Position) < 1f)
-            {
-                if (!AnimStopwatch.IsRunning)
-                {
-                    if (!AnimFlag)
-                    {
-                        Ped.Task.PlayAnimation("mini@cpr@char_a@cpr_str", "cpr_pumpchest", 8f, -8f, 4000, AnimationFlags.Loop, 0f);
-                        AnimStopwatch.Start();
-                    }
-                }
 
-                else
-                {
-                    if (AnimStopwatch.ElapsedMilliseconds > 4000)
-                    {
-                        Ped.Task.PlayAnimation("amb@medic@standing@kneel@exit", "exit", 8f, -8f, 4000, AnimationFlags.None, 0f);
+            if (!Flag) return;
 
-                        PendingPed.Resurrect();
-
-                        PendingPed.Task.PlayAnimation("get_up@directional@transition@prone_to_knees@injured","back_armsdown", 8f, -8f, 4000, AnimationFlags.None, 0f);
-
-                        AnimFlag = true;
-                        AnimStopwatch.Reset();
-                        AnimStopwatch.Stop();
-
-                        AnimStopwatch2.Start();
-                    }
-                }
-            }
-
-            if (AnimStopwatch2.IsRunning && AnimFlag)
-            {
-                if (AnimStopwatch2.ElapsedMilliseconds > 2000 && AnimStopwatch2.ElapsedMilliseconds < 4000 &&
-                    !AnimFlag2)
-                {
-                    PendingPed.Task.PlayAnimation("get_up@directional@movement@from_knees@injured", "getup_r_180", 8f,-8f, 4000, AnimationFlags.None, 0f);
-                    AnimFlag2 = true;
-                }
+            foreach (var revivedPed in Team.RevivedPedsList)
+                if (!revivedPed.IsInVehicle(Team.Ambulance))
+                    InVehFlag = false;
 
 
-                if (AnimStopwatch2.ElapsedMilliseconds > 4000)
-                {
-                    Ped.Task.EnterVehicle(Team.Ambulance, IsDriver ? VehicleSeat.Driver : VehicleSeat.RightFront, speed: 10f);
+            if (!InVehFlag) return;
 
-                    IsRunningToRevive = false;
-                    RevivedPed = PendingPed;
-                    PendingPed = null;
+            Ped driver = null;
+            foreach (var medic in Team.Paramedics)
+                if (medic.IsDriver)
+                    driver = medic.Ped;
 
-                    RevivedPed.AlwaysKeepTask = true;
-                    RevivedPed.Task.EnterVehicle(Team.Ambulance, IsDriver ? VehicleSeat.LeftRear : VehicleSeat.RightRear);
-
-                    Team.RevivedPedsList.Add(RevivedPed);
-
-                    AnimFlag = false;
-                    Flag = true;
-
-                    AnimStopwatch2.Reset();
-                    AnimStopwatch2.Stop();
-                }
-            }
-            ///////////////////////
-            if (Flag)
-            {
-                foreach (var revivedPed in Team.RevivedPedsList)
-                    if (!revivedPed.IsInVehicle(Team.Ambulance))
-                        InVehFlag = false;
-
-
-                if (InVehFlag)
-                {
-                    Ped driver = null;
-
-                    foreach (var medic in Team.Paramedics)
-                        if (medic.IsDriver)
-                            driver = medic.Ped;
-
-                    Team.Ambulance.IsSirenActive = true;
-                    driver?.Task.CruiseWithVehicle(Team.Ambulance, 100f, DrivingStyle.IgnoreLights);
-                }
-            }
+            Team.Ambulance.IsSirenActive = true;
+            driver?.Task.CruiseWithVehicle(Team.Ambulance, 100f, DrivingStyle.IgnoreLights);
         }
     }
 }
